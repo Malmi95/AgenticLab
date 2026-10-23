@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Advanced red-team framework: cross-platform implants, hardware-accelerated H.264 encoding, operator chat, file manager, lazy-loading SQLite hub, event viewer, and terminal CLI manager.">
+  <meta referrer="strict-origin-when-cross-origin">
+  <title>Advanced Red-Team Framework — Architecture &amp; Components</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --paper: #090b0e;
+      --surface: #11151a;
+      --ink: #edf1f5;
+      --muted: #aab4c0;
+      --line: #303943;
+      --accent: #f0a45d;
+      --soft: #171d24;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); color-scheme: dark; }
+    body {
+      margin: 0;
+      background: radial-gradient(ellipse at 50% -18rem, #202833 0, #0b0e12 38rem, #090b0e 78rem);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    ::selection { background: #8b572c; color: #fff; }
+    a { color: #ffc27f; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #ffe0b8; }
+    .skip-link { position: absolute; left: -9999px; top: 1rem; background: var(--surface); padding: .65rem 1rem; }
+    .skip-link:focus { left: 1rem; z-index: 2; }
+    .masthead {
+      max-width: 1240px; margin: auto; padding: 1.25rem 2rem;
+      display: flex; justify-content: space-between; gap: 1rem;
+      border-bottom: 1px solid var(--line); color: var(--muted);
+      font: 700 .72rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+    }
+    main { max-width: 1240px; margin: auto; padding: 3.5rem 2rem 5rem; }
+    .article-head { max-width: 920px; padding-bottom: 2.5rem; border-bottom: 1px solid var(--line); }
+    .eyebrow { margin: 0 0 1rem; color: var(--accent); font: 700 .76rem/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.14; color: #f4f6f8; }
+    h1 { max-width: 900px; margin: 0; font-size: clamp(2.55rem, 5.5vw, 4.65rem); letter-spacing: -.045em; line-height: 1.04; text-wrap: balance; }
+    .dek { max-width: 760px; margin: 1.35rem 0 0; color: #c0cad5; font-size: clamp(1.05rem, 1.7vw, 1.25rem); line-height: 1.7; }
+    .byline { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; color: var(--muted); font: .78rem/1.5 var(--mono); }
+    .layout { display: grid; grid-template-columns: minmax(0, 720px) minmax(190px, 1fr); gap: 4rem; padding-top: 2.5rem; }
+    article { min-width: 0; }
+    h2 { margin: 3rem 0 1.2rem; padding: 0 0 .85rem; border-bottom: 1px solid var(--line); font-size: clamp(1.55rem, 2.6vw, 2.05rem); font-weight: 750; letter-spacing: -.025em; line-height: 1.25; }
+    h3 { margin: 2rem 0 .8rem; padding: 0; color: #e9edf2; font-size: clamp(1.12rem, 1.8vw, 1.35rem); font-weight: 700; line-height: 1.35; }
+    h4 { margin: 1.5rem 0 .6rem; color: #e1e7ed; font-size: 1rem; font-weight: 700; line-height: 1.4; }
+    p { margin: 0 0 1rem; color: #d6dde5; }
+    ul { padding-left: 1.35rem; }
+    li { margin: .4rem 0; color: #d6dde5; }
+    .note {
+      margin: 1.5rem 0; padding: 1rem 1.15rem; background: var(--soft); border: 1px solid #303943;
+      border-left: 3px solid #e4a15e; border-radius: 4px; color: #dce3eb; font-size: .94rem;
+    }
+    .warning {
+      margin: 1.5rem 0; padding: 1rem 1.15rem; background: var(--soft); border-left: 3px solid var(--accent);
+      border-radius: 4px; color: #dce3eb; font-size: .94rem;
+    }
+    figure { margin: 1.4rem 0 1.8rem; }
+    .media-placeholder {
+      min-height: 230px; display: grid; place-items: center; padding: 1.5rem;
+      background: var(--surface); border: 1px dashed #56616e; color: var(--muted); text-align: center;
+    }
+    .media-placeholder strong { display: block; color: var(--accent); font: 700 .75rem/1.5 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    figcaption { padding-top: .65rem; color: var(--muted); font-size: .84rem; }
+    .status {
+      display: inline-block; padding: .2rem .55rem; border: 1px solid var(--line); border-radius: 999px;
+      color: var(--muted); font: 700 .68rem/1.5 var(--mono); letter-spacing: .04em; text-transform: uppercase;
+    }
+    aside { align-self: start; position: sticky; top: 1.5rem; padding-top: .15rem; }
+    aside h2 { margin: 0 0 .7rem; padding: 0; font: 700 .73rem/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #f0b778; }
+    aside p, aside li { color: #b8c2cd; font-size: .88rem; }
+    aside ul { padding-left: 1rem; }
+    .next { margin-top: 2.8rem; padding-top: 1.5rem; border-top: 2px solid var(--ink); }
+    footer { max-width: 1240px; margin: auto; padding: 1.2rem 2rem 2rem; border-top: 1px solid var(--line); color: #9ca8b5; font: .75rem/1.5 var(--mono); }
+    @media (max-width: 760px) {
+      .masthead, main, footer { padding-left: 1.2rem; padding-right: 1.2rem; }
+      main { padding-top: 2.5rem; }
+      .layout { grid-template-columns: 1fr; gap: 2rem; }
+      aside { position: static; border-top: 1px solid var(--line); padding-top: 1.2rem; }
+      h2 { font-size: 1.7rem; }
+    }
+    @media print {
+      body { background: white; font-size: 12pt; }
+      .masthead, footer { padding-left: 0; padding-right: 0; }
+      main { padding: 1.5rem 0; }
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; }
+    }
+    /* ===== Unified process tree (kept for parity) ===== */
+    .live-process-tree {
+      --pt-bg: #090c10; --pt-head: #171c22; --pt-row: #1b222a; --pt-row-alt: #151b21;
+      --pt-border: #343e49; --pt-text: #edf2f7; --pt-muted: #b9c4cf;
+      --pt-red: #ff5968; --pt-orange: #ffad62;
+      color: var(--pt-text); background: var(--pt-bg); border: 1px solid #38424e;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; line-height: 1.25; border-radius: 2px; box-shadow: 0 12px 30px rgba(0,0,0,.22);
+    }
+    .live-process-tree .flow-header { background: linear-gradient(135deg, #1b222a, #101419); border-bottom: 1px solid #3a4551; }
+    .live-process-tree .flow-header .flow-title { color: #f6f8fa; }
+    .live-process-tree .flow-header .flow-subtitle { color: #b2bdc8; }
+    .pt-toolbar { background: #10151a; border-bottom-color: #303943; color: #b9c4cf; }
+    .pt-toolbar input { background: #080a0d; color: #f4f6f8; border-color: #46515e; }
+    .pt-toolbar button { background: #222a33; color: #f0f3f6; border-color: #485462; }
+    .pt-toolbar button:hover { background: #303b47; }
+    .pt-tree { background: #090c10; }
+    .pt-node { position: relative; margin: 3px 0; min-width: 660px; }
+    .pt-node[hidden] { display: none !important; }
+    .pt-children { margin-left: 20px; padding-left: 10px; border-left: 1px solid #46515e; }
+    .pt-children.is-collapsed { display: none; }
+    .pt-row { min-height: 34px; display: flex; align-items: center; gap: 0; background: #1b222a; border: 1px solid #303943; border-left: 3px solid #7b8998; color: var(--pt-text); }
+    .pt-row.alert { border-left-color: #ff5968; }
+    .pt-row.warning { border-left-color: #ffad62; }
+    .pt-toggle { width: 18px; flex: 0 0 18px; align-self: stretch; border: 0; padding: 0; background: transparent; color: #c7d1dc; cursor: pointer; font-size: 12px; }
+    .pt-toggle:disabled { cursor: default; opacity: .55; }
+    .pt-pid { flex: 0 0 48px; padding: 5px 4px; color: #bac6d2; background: rgba(0,0,0,.22); border-right: 1px solid #303943; font-size: 10px; }
+    .pt-name { flex: 0 0 auto; padding: 5px 4px; color: #f2f5f8; font-weight: 600; white-space: nowrap; }
+    .pt-name em { font-style: normal; font-size: 9px; border: 1px solid #876444; padding: 0 3px; margin-left: 3px; background: #292016; }
+    .pt-command { flex: 1 1 160px; min-width: 50px; padding: 5px 4px; color: #b7c3cf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pt-metrics { display: flex; flex: 0 0 auto; align-self: stretch; background: rgba(0,0,0,.22); }
+    .pt-metrics b { display: flex; align-items: center; justify-content: center; gap: 3px; width: 48px; border-left: 1px solid #303943; color: #d6e0e9; font-size: 10px; font-weight: 500; white-space: nowrap; }
+    .pt-node.payload { margin-top: 5px; }
+    .pt-node.payload .pt-row { border-left-color: #ffad62; }
+    .live-process-tree .c2-box { background: #17130f; color: #f1e4d5; border-color: #765537; }
+    .live-process-tree .c2-detail { color: #c6b7a6; }
+    @media (max-width: 760px) {
+      .pt-toolbar input { width: 10rem; }
+      .pt-tree { padding: .2rem; }
+      .pt-node { min-width: 620px; }
+      .pt-metrics b { width: 42px; }
+    }
+    /* ===== Report-wide charcoal theme ===== */
+    :root { color-scheme: dark; }
+    h2, h3 { scroll-margin-top: 1.5rem; }
+    /* ===== Component cards ===== */
+    .card {
+      margin: 1.2rem 0; padding: 1.15rem 1.3rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 8px;
+    }
+    .card h4 { margin: 0 0 .75rem; color: #f0b778; }
+    .card ul { margin: 0; }
+    .stage-list { display: grid; gap: .7rem; margin: 1.25rem 0 0; }
+    .stage-list > div {
+      display: grid; grid-template-columns: minmax(125px, .65fr) minmax(0, 1.6fr);
+      gap: 1rem; padding: .9rem 1rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 8px;
+    }
+    .stage-list dt { color: #f0b778; font-weight: 700; }
+    .stage-list dd { margin: 0; color: #d6dde5; }
+    @media (max-width: 520px) {
+      .stage-list > div { grid-template-columns: 1fr; gap: .25rem; }
+    }
+    .card h4 { margin-top: 0; }
+    .card ul { padding-left: 1.25rem; }
+    .card li { color: #d6dde5; }
+    .tag {
+      display: inline-block; padding: .18rem .5rem; border-radius: 999px; border: 1px solid #46515e;
+      background: #1a2028; color: #c9d3dd; font: 700 .66rem/1.5 var(--mono); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+    }
+    .tag.arch { color: #ffd19a; border-color: #765537; background: #231a12; }
+    .tag.c-half { color: #ffb3ba; border-color: #7a2f38; background: #2a1519; }
+    .tag.cpp { color: #9ed5a8; border-color: #2f6b4a; background: #14221a; }
+    .tag.server { color: #c3d9f0; border-color: #284a7a; background: #152330; }
+    .tag.gui { color: #ffd19a; border-color: #a5795a; background: #2a2018; }
+    /* ===== YouTube thumbnail/player ===== */
+    .video-frame {
+      margin: 2.5rem 0; padding: 1rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 8px;
+    }
+    .video-frame .label {
+      display: block; margin-bottom: .8rem; font: 700 .72rem/1.4 var(--mono);
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    }
+    .video-thumb {
+      position: relative; display: block; width: 100%; aspect-ratio: 16 / 9;
+      overflow: hidden; padding: 0; border: 0; border-radius: 6px;
+      background: #050607; cursor: pointer;
+    }
+    .video-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .video-thumb::after {
+      content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.16);
+      transition: background .2s ease;
+    }
+    .video-thumb:hover::after { background: rgba(0,0,0,.03); }
+    .video-play {
+      position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%,-50%);
+      display: grid; place-items: center; width: 76px; height: 54px;
+      border-radius: 12px; background: #e62117; color: white; font-size: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+    .video-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 6px; }
+    @media (max-width: 760px) { .video-frame { text-align: left; } }
+    .part-navigation { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; margin: 2.8rem 0 1rem; padding: 1.35rem 1.5rem; border: 1px solid #3b4652; border-left: 4px solid #e4a15e; border-radius: 8px; background: linear-gradient(135deg, #171d24, #101419); }
+    .part-navigation .nav-copy { min-width: 0; }
+    .part-navigation .nav-kicker { display: block; margin-bottom: .35rem; color: #ffb66e; font: 700 .72rem/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .part-navigation h2 { display: block; margin: 0 0 .45rem; padding: 0; border: 0; box-shadow: none; background: none; font-size: 1.25rem; }
+    .part-navigation p { margin: 0; color: #b8c2cd; font-size: .92rem; }
+    .part-navigation a { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: .8rem 1rem; border: 1px solid #765537; border-radius: 5px; background: #2a2018; color: #ffd19a; font-weight: 700; text-decoration: none; }
+    .part-navigation a:hover { background: #3a2a1c; color: #ffe0b8; }
+    @media (max-width: 760px) { .part-navigation { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+
+  <a class="skip-link" href="#article">Skip to article</a>
+  <header class="masthead">
+    <span>Advanced Red-Team Framework</span>
+  </header>
+  <main id="article">
+    <header class="article-head">
+      <p class="eyebrow">Cross-platform implant · hardware-accelerated streaming · operator tooling</p>
+      <h1>Advanced Red-Team Framework</h1>
+      <p class="dek">The component set for a controlled red-team operations hub: a custom H.264 encoder with hardware acceleration, a shared chat bus for operators, a lazy-loading file manager backed by SQLite, an event viewer, and a terminal CLI manager that bridges forkpty on Linux to named pipes on Windows. Native architecture: implants written in C/C++, server in C, operator GUI and service in C#.</p>
+
+      <div class="byline">
+        <span>Series: Advanced red-team implant</span>
+        <span>Focus: Operator tooling and implant architecture</span>
+        <span>Status: Components defined · architecture review</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <article>
+
+        <section aria-labelledby="arch-title">
+          <h2 id="arch-title"><span class="sec-num">1. </span>Architecture: C/C++ implants, C server, C# GUI + service</h2>
+          <p>The framework is split across two native tiers plus a managed shell. The <strong>implant tier</strong> is authored in C/C++ for low-overhead, cross-platform operation: each implant is a thin process that talks to the host service over a local channel. The <strong>server</strong> is a standalone C binary that brokers connections, owns the SQLite hub, and routes operator commands. The <strong>operator surface</strong> is a C# GUI (for interactive control) and a C# Windows service (for unattended background sessions), both sharing a small C shim for socket/pipe compatibility.</p>
+          <dl class="stage-list">
+            <div><dt>implants</dt><dd>C/C++ — pure native, cross-platform, zero runtime dependency outside the OS</dd></div>
+            <div><dt>Server</dt><dd>C — single binary, owns SQLite hub and command routing</dd></div>
+            <div><dt>Operator GUI</dt><dd>C# — interactive control surface (Windows / cross-platform host)</dd></div>
+            <div><dt>Background service</dt><dd>C# — unattended implant/session management on Windows</dd></div>
+            <div><dt>Compatibility shim</dt><dd>C — isolates the platform differences (named pipes vs. Unix sockets) from the C# layer</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="dxgi-title">
+          <h2 id="dxgi-title"><span class="sec-num">2. </span>dxgi + custom H.264 encoder for hardware acceleration</h2>
+          <p>The capture layer is built on <strong>DirectX Graphics Infrastructure (DXGI)</strong>, wiring a custom H.264 encoder to the GPU's hardware encode path. The encoder is hand-tuned for low-latency, high-bitrate-capable streaming from the lab VM: it requests the GPU's hardware encoder, submits B-frames and rate-control hints, and dumps the bitstream to a ring buffer that feeds the file manager. The DXGI pipeline keeps the capture from stalling the implant's main loop and lets the operator record high-quality sessions without saturating the CPU.</p>
+          <div class="card">
+            <h4>Pipeline sketch</h4>
+            <ul>
+              <li>DXGI adapter enumeration &amp; hardware-encoder capability check</li>
+              <li>Custom H.264 encoder (libx264-style wrapper) bound to the GPU</li>
+              <li>Rate control + B-frame tuning for low-latency capture</li>
+              <li>Ring buffer → file manager (SQLite metadata) delivery</li>
+            </ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="implants-title">
+          <h2 id="implants-title"><span class="sec-num">3. </span>Cross-platform implants</h2>
+          <p>Each implant is a C/C++ binary compiled for its target OS. The implant surface exposes a small, versioned protocol: heartbeat, file operations, process listing, screen-capture requests, and chat message fan-out. On <strong>Linux</strong>, the implant's terminal manager uses <code>forkpty</code> to spawn a pseudo-terminal and relay a PTY over the local channel. On <strong>Windows</strong>, the same logical terminal is implemented with <strong>named pipes</strong>, so the operator's C# GUI can talk to the same endpoint regardless of platform.</p>
+          <div class="card">
+            <h4>Terminal manager abstraction</h4>
+            <ul>
+              <li><strong>Linux:</strong> <code>forkpty</code> → PTY slave, master relayed over the local channel</li>
+              <li><strong>Windows:</strong> named pipe server/client pair, abstracted behind the same C shim</li>
+              <li>Message envelope: <code>{ cmd, payload, seq }</code> — identical wire format on both OSes</li>
+            </ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="chat-title">
+          <h2 id="chat-title"><span class="sec-num">4. </span>Chat system for operators</h2>
+          <p>The operator chat is a shared bus: every connected implant forwards its messages to the C server, which fans them out to all subscribed GUI clients. The chat supports per-session channels, timestamped messages, and a lightweight "react" hint set so operators can mark commands as executed or failed without opening a second window. Messages are persisted to the SQLite hub with a <code>chat_messages</code> table, giving a running audit trail of every session.</p>
+        </section>
+
+        <section aria-labelledby="file-title">
+          <h2 id="file-title"><span class="sec-num">5. </span>File manager with lazy loading and SQLite</h2>
+          <p>The file manager is a lazy-loading tree of objects kept in SQLite. The parent directory row is fetched eagerly; child entries are fetched on demand as the operator expands a folder. Each row carries a hash and size for integrity verification, and the SQLite hub acts as the single source of truth between the file manager, chat bus, and event viewer. Operations are versioned so the operator can undo a "file captured" action.</p>
+        </section>
+
+        <section aria-labelledby="event-title">
+          <h2 id="event-title"><span class="sec-num">6. </span>Event viewer</h2>
+          <p>The event viewer aggregates implant heartbeats, capture events, chat messages, and file operations into a chronological feed. Each event references a session and an implant, and the viewer renders them as a compact timeline with severity color-coding so an operator can see anomalous activity (e.g., a sudden burst of file writes or a failed capture) without leaving the operator surface.</p>
+          <div class="card">
+            <h4>Event feed columns</h4>
+            <ul>
+              <li>Session / implant / timestamp</li>
+              <li>Type: heartbeat, capture, file_op, chat, error</li>
+              <li>Severity: info, warning, alert</li>
+              <li>Payload snippet + link to SQLite event row</li>
+            </ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="terminal-title">
+          <h2 id="terminal-title"><span class="sec-num">7. </span>Terminal CLI manager with forkpty (Linux) and named pipes (Windows)</h2>
+          <p>The CLI manager is the shared terminal surface. It spawns a PTY via <code>forkpty</code> on Linux, or a named pipe pair on Windows, and multiplexes the implant's output to the C# GUI and the file manager's lazy-loading hub. The manager keeps the PTY in raw mode, applies a small line-decoder, and forwards keystrokes back to the implant. Because both paths speak the same wire format, the C# GUI can present one unified terminal to the operator regardless of host OS.</p>
+          <div class="card">
+            <h4>Linux (forkpty)</h4>
+            <ul>
+              <li><code>pid = forkpty(&amp;master, NULL, NULL, NULL);</code></li>
+              <li>Relay master fd → server channel</li>
+              <li>Keystrokes written to master fd</li>
+            </ul>
+            <h4>Windows (named pipes)</h4>
+            <ul>
+              <li>CreateNamedPipe / ConnectNamedPipe</li>
+              <li>Server side → same C shim as Linux path</li>
+              <li>Single wire format across OSes</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="next" aria-labelledby="video-title">
+          <p class="eyebrow">Reference video</p>
+          <h2 id="video-title"><span class="sec-num">8. </span>Capture &amp; operations reference</h2>
+          <p>The video below demonstrates the kind of high-quality, hardware-accelerated capture the framework is built around — the same pipeline of custom H.264 encoding, implant telemetry, and operator tooling.</p>
+          <div class="video-frame">
+            <span class="label">Reference: capture pipeline</span>
+            <button class="video-thumb" type="button" aria-label="Play reference video" data-video-id="LqcZkKCmzUU">
+              <img src="https://img.youtube.com/vi/LqcZkKCmzUU/hqdefault.jpg" alt="Video thumbnail">
+              <span class="video-play" aria-hidden="true">▶</span>
+            </button>
+          </div>
+        </section>
+
+      </article>
+
+      <aside aria-label="Table of contents">
+        <h2>In this framework</h2>
+        <ul>
+          <li><a href="#arch-title">Architecture (C/C++, C, C#)</a></li>
+          <li><a href="#dxgi-title">dxgi + H.264 encoder</a></li>
+          <li><a href="#implants-title">Cross-platform implants</a></li>
+          <li><a href="#chat-title">Operator chat system</a></li>
+          <li><a href="#file-title">File manager + SQLite</a></li>
+          <li><a href="#event-title">Event viewer</a></li>
+          <li><a href="#terminal-title">Terminal CLI manager</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer>Advanced Red-Team Framework · <a href="index.html">← Back to Project Repo</a></footer>
+
+  <script>
+    (() => {
+      const tree = document.querySelector('.live-process-tree');
+      if (!tree) return;
+      tree.querySelectorAll('.pt-toggle').forEach(button => {
+        const node = button.closest('.pt-node');
+        const children = node.querySelector(':scope > .pt-children');
+        if (!children) { button.disabled = true; button.textContent = '·'; return; }
+        button.addEventListener('click', () => {
+          const collapsed = children.classList.toggle('is-collapsed');
+          button.textContent = collapsed ? '▸' : '▾';
+        });
+      });
+      const filter = document.getElementById('pt-filter');
+      if (filter) {
+        filter.addEventListener('input', () => {
+          const query = filter.value.trim().toLowerCase();
+          tree.querySelectorAll('.pt-node').forEach(node => {
+            node.hidden = !!query && !(node.dataset.pid + ' ' + node.dataset.name + ' ' + node.textContent).toLowerCase().includes(query);
+          });
+        });
+      }
+      const expand = document.getElementById('pt-expand');
+      if (expand) {
+        expand.addEventListener('click', () => {
+          tree.querySelectorAll('.pt-children').forEach(group => group.classList.remove('is-collapsed'));
+          tree.querySelectorAll('.pt-toggle').forEach(button => {
+            if (button.closest('.pt-node').querySelector(':scope > .pt-children')) button.textContent = '▾';
+          });
+        });
+      }
+      const collapse = document.getElementById('pt-collapse');
+      if (collapse) {
+        collapse.addEventListener('click', () => {
+          tree.querySelectorAll('.pt-children').forEach(group => group.classList.add('is-collapsed'));
+          tree.querySelectorAll('.pt-toggle').forEach(button => {
+            if (button.closest('.pt-node').querySelector(':scope > .pt-children')) button.textContent = '▸';
+          });
+        });
+      }
+    })();
+  </script>
+  <script>
+    document.querySelectorAll('.video-thumb').forEach(button => {
+      button.addEventListener('click', () => {
+        const videoId = button.dataset.videoId;
+        const player = document.createElement('iframe');
+        player.className = 'video-player';
+        player.title = 'YouTube video player';
+        player.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(videoId) + '?autoplay=1&rel=0';
+        player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        player.allowFullscreen = true;
+        player.referrerPolicy = 'strict-origin-when-cross-origin';
+        button.replaceWith(player);
+      }, { once: true });
+    });
+  </script>
+
+</body>
+</html>
